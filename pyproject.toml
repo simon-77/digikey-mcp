@@ -1,0 +1,10 @@
+[project]
+name = "digikey-mcp"
+version = "0.1.0"
+description = "DigiKey MCP Server for product search"
+dependencies = [
+    "fastmcp",
+    "requests",
+    "python-dotenv",
+]
+requires-python = ">=3.10" 

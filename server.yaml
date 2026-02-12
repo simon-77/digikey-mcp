@@ -1,0 +1,37 @@
+name: digikey
+image: mcp/digikey
+type: server
+meta:
+  category: engineering
+  tags: [electronics, components, hardware, digikey]
+about:
+  title: DigiKey
+  description: Search DigiKey's catalog — component pricing, datasheets, substitutions
+  icon: https://www.google.com/s2/favicons?domain=digikey.com&sz=64
+source:
+  project: https://github.com/simon-77/digikey-mcp
+  # commit: <fill when submitting PR to docker/mcp-registry>
+config:
+  secrets:
+    - name: digikey.CLIENT_ID
+      env: CLIENT_ID
+    - name: digikey.CLIENT_SECRET
+      env: CLIENT_SECRET
+  env:
+    - name: USE_SANDBOX
+      value: "false"
+    - name: DIGIKEY_LOCALE_SITE
+      value: "{{digikey.locale_site}}"
+    - name: DIGIKEY_LOCALE_LANGUAGE
+      value: "{{digikey.locale_language}}"
+    - name: DIGIKEY_LOCALE_CURRENCY
+      value: "{{digikey.locale_currency}}"
+  parameters:
+    type: object
+    properties:
+      locale_site:
+        type: string
+      locale_language:
+        type: string
+      locale_currency:
+        type: string
