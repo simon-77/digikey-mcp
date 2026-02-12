@@ -6,32 +6,120 @@ Originally inspired by [bengineer19/digikey_mcp](https://github.com/bengineer19/
 
 ## Prerequisites
 
-- DigiKey API credentials ([client_credentials grant](https://developer.digikey.com/))
-- Docker (recommended) or Python 3.10+
+- **DigiKey API credentials** — Register at [developer.digikey.com](https://developer.digikey.com/), create an app with `client_credentials` grant type
+- **Docker** (recommended) or Python 3.10+
+- **Docker MCP Toolkit** — included with [Docker Desktop](https://www.docker.com/products/docker-desktop/) (requires MCP Toolkit support)
 
-## Quick Start
+## Quick Start — Docker MCP Toolkit
 
-### Docker MCP Toolkit (recommended)
+The recommended way to run this server. The Docker MCP gateway manages the container lifecycle, injects secrets, and exposes tools to MCP clients like Claude Code or Claude Desktop.
+
+### 1. Build the Docker image
 
 ```bash
-# Build image
-docker build -t digikey-mcp .
+git clone https://github.com/simon-77/digikey-mcp.git
+cd digikey-mcp
+docker build -t digikey-mcp:latest .
+```
 
-# Set secrets
+### 2. Create a custom catalog
+
+The gateway discovers servers through catalog files. Create one at `~/.docker/mcp/catalogs/custom.yaml`:
+
+```yaml
+version: 3
+name: custom
+displayName: Custom MCP Servers
+registry:
+  digikey:
+    description: DigiKey component search, pricing, and datasheets via API
+    title: DigiKey
+    type: server
+    image: digikey-mcp:latest
+    secrets:
+      - name: digikey.CLIENT_ID
+        env: CLIENT_ID
+      - name: digikey.CLIENT_SECRET
+        env: CLIENT_SECRET
+    env:
+      - name: USE_SANDBOX
+        value: "false"
+      - name: DIGIKEY_LOCALE_SITE
+        value: "US"
+      - name: DIGIKEY_LOCALE_LANGUAGE
+        value: "en"
+      - name: DIGIKEY_LOCALE_CURRENCY
+        value: "USD"
+    tools:
+      - name: keyword_search
+      - name: product_details
+      - name: search_manufacturers
+      - name: search_categories
+      - name: get_category_by_id
+      - name: search_product_substitutions
+      - name: get_product_media
+      - name: get_product_pricing
+      - name: get_digi_reel_pricing
+    prompts: 0
+    resources: {}
+```
+
+Change the `env` values to match your locale (e.g., `AT`/`en`/`EUR` for Austria).
+
+> **Note:** The `tools` list must match the tools defined in the server. The gateway uses this list to register tools with MCP clients. `prompts: 0` and `resources: {}` indicate the server exposes no MCP prompts or resources.
+
+### 3. Register the catalog and enable the server
+
+```bash
+docker mcp catalog import ~/.docker/mcp/catalogs/custom.yaml
+docker mcp server enable digikey
+```
+
+Re-run `catalog import` whenever you modify `custom.yaml`.
+
+### 4. Set secrets
+
+```bash
 docker mcp secret set digikey.CLIENT_ID
 docker mcp secret set digikey.CLIENT_SECRET
+```
 
-# Add catalog and enable
-docker mcp catalog import your-catalog.yaml
-docker mcp server enable digikey
+You'll be prompted to enter each value. Secret names **must** be prefixed with the server name (`digikey.`).
 
-# Connect to your MCP client
+### 5. Connect an MCP client
+
+```bash
 docker mcp client connect claude-code
 ```
 
-See [server.yaml](server.yaml) for the catalog entry reference.
+This adds the gateway to your project's `.mcp.json`:
 
-### Docker (standalone container)
+```json
+{
+  "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": ["mcp", "gateway", "run"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+When the MCP client starts, the gateway launches the `digikey-mcp:latest` container, injects secrets as environment variables, and proxies tool calls.
+
+### Rebuilding after changes
+
+```bash
+docker build -t digikey-mcp:latest .
+# Restart your MCP client to pick up the new image
+```
+
+No need to re-import the catalog or re-set secrets — just rebuild and restart.
+
+## Alternative: Docker standalone
+
+Run the container directly without the MCP Toolkit. You manage secrets and lifecycle yourself.
 
 ```bash
 docker build -t digikey-mcp .
@@ -40,12 +128,13 @@ docker run --rm -i \
   -e CLIENT_ID=your_client_id \
   -e CLIENT_SECRET=your_client_secret \
   -e USE_SANDBOX=false \
+  -e DIGIKEY_LOCALE_SITE=US \
+  -e DIGIKEY_LOCALE_LANGUAGE=en \
+  -e DIGIKEY_LOCALE_CURRENCY=USD \
   digikey-mcp
 ```
 
-### MCP Client Config (Docker)
-
-Add to your `.mcp.json` or Claude Desktop config:
+`.mcp.json` for MCP clients:
 
 ```json
 {
@@ -57,6 +146,9 @@ Add to your `.mcp.json` or Claude Desktop config:
         "-e", "CLIENT_ID=your_client_id",
         "-e", "CLIENT_SECRET=your_client_secret",
         "-e", "USE_SANDBOX=false",
+        "-e", "DIGIKEY_LOCALE_SITE=US",
+        "-e", "DIGIKEY_LOCALE_LANGUAGE=en",
+        "-e", "DIGIKEY_LOCALE_CURRENCY=USD",
         "digikey-mcp"
       ]
     }
@@ -64,23 +156,30 @@ Add to your `.mcp.json` or Claude Desktop config:
 }
 ```
 
-### Standalone (pip/uv)
+Locale env vars are optional — defaults are `US`/`en`/`USD` (see [Configuration](#configuration)).
+
+## Alternative: Standalone (pip)
+
+Run without Docker. Requires Python 3.10+.
 
 ```bash
 git clone https://github.com/simon-77/digikey-mcp.git
 cd digikey-mcp
-pip install fastmcp requests python-dotenv
+pip install .
 
 cat > .env <<EOF
 CLIENT_ID=your_client_id
 CLIENT_SECRET=your_client_secret
 USE_SANDBOX=false
+DIGIKEY_LOCALE_SITE=US
+DIGIKEY_LOCALE_LANGUAGE=en
+DIGIKEY_LOCALE_CURRENCY=USD
 EOF
 
 python digikey_mcp_server.py
 ```
 
-`.mcp.json` for standalone:
+`.mcp.json` for MCP clients:
 
 ```json
 {
@@ -92,12 +191,17 @@ python digikey_mcp_server.py
       "env": {
         "CLIENT_ID": "your_client_id",
         "CLIENT_SECRET": "your_client_secret",
-        "USE_SANDBOX": "false"
+        "USE_SANDBOX": "false",
+        "DIGIKEY_LOCALE_SITE": "US",
+        "DIGIKEY_LOCALE_LANGUAGE": "en",
+        "DIGIKEY_LOCALE_CURRENCY": "USD"
       }
     }
   }
 }
 ```
+
+Locale env vars are optional — defaults are `US`/`en`/`USD` (see [Configuration](#configuration)).
 
 ## Tools
 
@@ -128,23 +232,28 @@ Sort fields: `Packaging`, `ProductStatus`, `DigiKeyProductNumber`, `Manufacturer
 
 ## Configuration
 
+All settings are controlled via environment variables. In Docker MCP Toolkit mode, these are set in the catalog `env` block. In standalone mode, use a `.env` file.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLIENT_ID` | *(required)* | DigiKey API client ID |
 | `CLIENT_SECRET` | *(required)* | DigiKey API client secret |
-| `USE_SANDBOX` | `true` | Use sandbox API (`true`) or production (`false`) |
+| `USE_SANDBOX` | `true` | Use sandbox API (`true`) or production (`false`). The Dockerfile and catalog examples override this to `false`. |
 | `DIGIKEY_LOCALE_SITE` | `US` | DigiKey site (e.g., `AT`, `DE`, `UK`) |
 | `DIGIKEY_LOCALE_LANGUAGE` | `en` | Response language |
 | `DIGIKEY_LOCALE_CURRENCY` | `USD` | Pricing currency (e.g., `EUR`) |
 
 ## Docker MCP Registry
 
-This repo is structured for submission to the [docker/mcp-registry](https://github.com/docker/mcp-registry). The [server.yaml](server.yaml) file contains the catalog entry reference — adapt it when submitting a PR to the registry.
+This repo is structured for submission to the [docker/mcp-registry](https://github.com/docker/mcp-registry). The [server.yaml](server.yaml) file contains the registry entry reference — this is **not** the same as the local catalog above. When the server is published to the registry, users won't need to create a custom catalog; they'll install it directly via `docker mcp server enable digikey`.
 
-Key requirements met:
-- `Dockerfile` with `io.docker.server.metadata` label
-- Secrets declared for `CLIENT_ID` and `CLIENT_SECRET`
-- Configurable locale via environment variables
+## Troubleshooting
+
+**Gateway shows 0 tools:** The server uses lazy OAuth initialization — it won't authenticate until the first tool call. If the gateway still shows no tools, verify the `tools` list in your catalog matches the tool names above.
+
+**OAuth errors on first tool call:** Verify your credentials with `docker mcp secret list`. Secret names must be prefixed: `digikey.CLIENT_ID`, not `CLIENT_ID`.
+
+**Catalog changes not taking effect:** Re-run `docker mcp catalog import ~/.docker/mcp/catalogs/custom.yaml` after editing the catalog file. Restart your MCP client afterward.
 
 ## License
 
