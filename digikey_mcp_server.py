@@ -247,6 +247,40 @@ def get_digi_reel_pricing(product_number: str, requested_quantity: int, customer
     return _make_request("GET", url, headers)
 
 
+@mcp.tool()
+def list_orders(start_date: str = None, end_date: str = None, page_size: int = 10) -> dict:
+    """List DigiKey orders within a date range.
+
+    Args:
+        start_date: Range start in YYYY-MM-DD format (default: 30 days ago)
+        end_date: Range end in YYYY-MM-DD format (default: today)
+        page_size: Results per page, max 25 (default: 10)
+    """
+    url = f"{API_BASE}/orderstatus/v4/orders"
+    headers = _get_headers()
+
+    params = {"PageSize": page_size}
+    if start_date:
+        params["StartDate"] = start_date
+    if end_date:
+        params["EndDate"] = end_date
+
+    url += "?" + "&".join(f"{k}={v}" for k, v in params.items())
+    return _make_request("GET", url, headers)
+
+
+@mcp.tool()
+def get_order_status(sales_order_id: int) -> dict:
+    """Get status and details of a specific DigiKey sales order.
+
+    Args:
+        sales_order_id: The sales order ID to retrieve
+    """
+    url = f"{API_BASE}/orderstatus/v4/salesorder/{sales_order_id}"
+    headers = _get_headers()
+    return _make_request("GET", url, headers)
+
+
 def main():
     mcp.run()
 
