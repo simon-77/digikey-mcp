@@ -17,6 +17,8 @@ config:
       env: CLIENT_ID
     - name: digikey.CLIENT_SECRET
       env: CLIENT_SECRET
+    - name: digikey.DIGIKEY_ACCOUNT_ID
+      env: DIGIKEY_ACCOUNT_ID
   env:
     - name: USE_SANDBOX
       value: "false"

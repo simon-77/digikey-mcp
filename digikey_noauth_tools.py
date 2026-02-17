@@ -52,7 +52,7 @@ def generate_cart_url(parts: list[dict], new_cart: bool = True) -> dict:
 mcp.tool()(generate_cart_url)
 
 
-def create_mylist_link(list_name: str, parts: list[dict], tags: str = None) -> dict:
+def create_mylist_link(list_name: str, parts: list[dict], tags: str | None = None) -> dict:
     """Create a DigiKey MyList import link via the third-party API.
 
     Returns a single-use URL. When the user opens it, the parts are

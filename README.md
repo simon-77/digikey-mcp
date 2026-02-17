@@ -7,8 +7,21 @@ Originally inspired by [bengineer19/digikey_mcp](https://github.com/bengineer19/
 ## Prerequisites
 
 - **DigiKey API credentials** — Register at [developer.digikey.com](https://developer.digikey.com/), create an app with `client_credentials` grant type
+- **DigiKey Customer Number** — Required for order tools. Find it in your [DigiKey account settings](https://www.digikey.com/account/myaccount/).
 - **Docker** (recommended) or Python 3.10+
 - **Docker MCP Toolkit** — included with [Docker Desktop](https://www.docker.com/products/docker-desktop/) (requires MCP Toolkit support)
+
+## Project Structure
+
+```
+digikey-mcp/
+├── mcp_app.py               # Shared FastMCP instance
+├── digikey_mcp_server.py     # Main server — authenticated tools (OAuth2)
+├── digikey_noauth_tools.py   # No-auth tools (cart URL, MyList link)
+├── Dockerfile                # Docker image with embedded metadata
+├── server.yaml               # Registry entry for docker/mcp-registry
+└── tests/                    # Unit tests
+```
 
 ## Quick Start — Docker MCP Toolkit
 
@@ -41,6 +54,8 @@ registry:
         env: CLIENT_ID
       - name: digikey.CLIENT_SECRET
         env: CLIENT_SECRET
+      - name: digikey.DIGIKEY_ACCOUNT_ID
+        env: DIGIKEY_ACCOUNT_ID
     env:
       - name: USE_SANDBOX
         value: "false"
@@ -86,9 +101,12 @@ Re-run `catalog import` whenever you modify `custom.yaml`.
 ```bash
 docker mcp secret set digikey.CLIENT_ID
 docker mcp secret set digikey.CLIENT_SECRET
+docker mcp secret set digikey.DIGIKEY_ACCOUNT_ID
 ```
 
 You'll be prompted to enter each value. Secret names **must** be prefixed with the server name (`digikey.`).
+
+The Account ID is your DigiKey customer number — required for order tools (`list_orders`, `get_order_status`).
 
 ### 5. Connect an MCP client
 
@@ -131,6 +149,7 @@ docker build -t digikey-mcp .
 docker run --rm -i \
   -e CLIENT_ID=your_client_id \
   -e CLIENT_SECRET=your_client_secret \
+  -e DIGIKEY_ACCOUNT_ID=your_customer_number \
   -e USE_SANDBOX=false \
   -e DIGIKEY_LOCALE_SITE=US \
   -e DIGIKEY_LOCALE_LANGUAGE=en \
@@ -149,6 +168,7 @@ docker run --rm -i \
         "run", "--rm", "-i",
         "-e", "CLIENT_ID=your_client_id",
         "-e", "CLIENT_SECRET=your_client_secret",
+        "-e", "DIGIKEY_ACCOUNT_ID=your_customer_number",
         "-e", "USE_SANDBOX=false",
         "-e", "DIGIKEY_LOCALE_SITE=US",
         "-e", "DIGIKEY_LOCALE_LANGUAGE=en",
@@ -174,6 +194,7 @@ pip install .
 cat > .env <<EOF
 CLIENT_ID=your_client_id
 CLIENT_SECRET=your_client_secret
+DIGIKEY_ACCOUNT_ID=your_customer_number
 USE_SANDBOX=false
 DIGIKEY_LOCALE_SITE=US
 DIGIKEY_LOCALE_LANGUAGE=en
@@ -195,6 +216,7 @@ python digikey_mcp_server.py
       "env": {
         "CLIENT_ID": "your_client_id",
         "CLIENT_SECRET": "your_client_secret",
+        "DIGIKEY_ACCOUNT_ID": "your_customer_number",
         "USE_SANDBOX": "false",
         "DIGIKEY_LOCALE_SITE": "US",
         "DIGIKEY_LOCALE_LANGUAGE": "en",
@@ -242,6 +264,8 @@ Locale env vars are optional — defaults are `US`/`en`/`USD` (see [Configuratio
 | `list_orders` | List orders within a date range (last 30 days default) |
 | `get_order_status` | Get full details of a specific sales order |
 
+> **Note:** Order tools require `DIGIKEY_ACCOUNT_ID` (your DigiKey customer number). Without it, these tools return 400 Bad Request.
+
 ### Search Options
 
 Filters (comma-separated in `search_options`): `LeadFree`, `RoHSCompliant`, `InStock`, `HasDatasheet`, `HasProductPhoto`, `Has3DModel`, `NewProduct`
@@ -250,12 +274,13 @@ Sort fields: `Packaging`, `ProductStatus`, `DigiKeyProductNumber`, `Manufacturer
 
 ## Configuration
 
-All settings are controlled via environment variables. In Docker MCP Toolkit mode, these are set in the catalog `env` block. In standalone mode, use a `.env` file.
+All settings are controlled via environment variables. In Docker MCP Toolkit mode, these are set in the catalog `env` block or as secrets. In standalone mode, use a `.env` file.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLIENT_ID` | *(required)* | DigiKey API client ID |
 | `CLIENT_SECRET` | *(required)* | DigiKey API client secret |
+| `DIGIKEY_ACCOUNT_ID` | *(optional)* | DigiKey customer number. Required for order tools (`list_orders`, `get_order_status`). |
 | `USE_SANDBOX` | `true` | Use sandbox API (`true`) or production (`false`). The Dockerfile and catalog examples override this to `false`. |
 | `DIGIKEY_LOCALE_SITE` | `US` | DigiKey site (e.g., `AT`, `DE`, `UK`) |
 | `DIGIKEY_LOCALE_LANGUAGE` | `en` | Response language |
@@ -270,6 +295,8 @@ This repo is structured for submission to the [docker/mcp-registry](https://gith
 **Gateway shows 0 tools:** The server uses lazy OAuth initialization — it won't authenticate until the first tool call. If the gateway still shows no tools, verify the `tools` list in your catalog matches the tool names above.
 
 **OAuth errors on first tool call:** Verify your credentials with `docker mcp secret list`. Secret names must be prefixed: `digikey.CLIENT_ID`, not `CLIENT_ID`.
+
+**Order tools return 400 Bad Request:** The order endpoints require `DIGIKEY_ACCOUNT_ID`. Set it with `docker mcp secret set digikey.DIGIKEY_ACCOUNT_ID`. The value is your DigiKey customer number, found in your [account settings](https://www.digikey.com/account/myaccount/).
 
 **Catalog changes not taking effect:** Re-run `docker mcp catalog import ~/.docker/mcp/catalogs/custom.yaml` after editing the catalog file. Restart your MCP client afterward.
 
