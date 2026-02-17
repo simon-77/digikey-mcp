@@ -29,6 +29,8 @@ else:
 # Initialize FastMCP server
 mcp = FastMCP("DigiKey MCP Server")
 
+import digikey_noauth_tools  # noqa: E402, F401 — registers no-auth tools on mcp
+
 def get_access_token():
     """Get OAuth2 access token from DigiKey."""
     # Check if credentials are loaded
