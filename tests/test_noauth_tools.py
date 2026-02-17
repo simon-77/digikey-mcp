@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from digikey_noauth_tools import generate_cart_url
+from digikey_noauth_tools import generate_cart_url, DIGIKEY_DOMAIN, _derive_domain
 
 
 def test_single_part_url():
@@ -13,7 +13,7 @@ def test_single_part_url():
     assert "part1=296-8875-1-ND" in result["url"]
     assert "qty1=10" in result["url"]
     assert "newcart=true" in result["url"]
-    assert result["url"].startswith("https://www.digikey.com/classic/ordering/fastadd.aspx?")
+    assert result["url"].startswith(f"https://{DIGIKEY_DOMAIN}/classic/ordering/fastadd.aspx?")
 
 
 def test_multiple_parts():
@@ -41,6 +41,28 @@ def test_long_url_warning():
     result = generate_cart_url(parts)
     assert "warning" in result
     assert "url" in result
+
+
+def test_derive_domain_common_sites():
+    assert _derive_domain("US") == "www.digikey.com"
+    assert _derive_domain("UK") == "www.digikey.co.uk"
+    assert _derive_domain("AT") == "www.digikey.at"
+    assert _derive_domain("DE") == "www.digikey.de"
+    assert _derive_domain("JP") == "www.digikey.jp"
+
+
+def test_derive_domain_multi_segment_tlds():
+    assert _derive_domain("AU") == "www.digikey.com.au"
+    assert _derive_domain("MX") == "www.digikey.com.mx"
+    assert _derive_domain("IL") == "www.digikey.co.il"
+    assert _derive_domain("NZ") == "www.digikey.co.nz"
+    assert _derive_domain("ZA") == "www.digikey.co.za"
+    assert _derive_domain("TH") == "www.digikey.co.th"
+
+
+def test_derive_domain_case_insensitive():
+    assert _derive_domain("us") == "www.digikey.com"
+    assert _derive_domain("at") == "www.digikey.at"
 
 
 from unittest.mock import patch, MagicMock

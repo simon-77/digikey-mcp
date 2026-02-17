@@ -257,6 +257,8 @@ Locale env vars are optional — defaults are `US`/`en`/`USD` (see [Configuratio
 | `generate_cart_url` | Build a FastAdd URL to populate the DigiKey shopping cart |
 | `create_mylist_link` | Create a single-use URL to import parts into DigiKey MyLists |
 
+> **Locale-aware URLs:** Both tools generate URLs using the domain derived from `DIGIKEY_LOCALE_SITE` (e.g., `AT` → `www.digikey.at`, `DE` → `www.digikey.de`). This ensures links open in the correct regional DigiKey site. Defaults to `www.digikey.com` (US).
+
 ### Order Status
 
 | Tool | Description |
@@ -282,7 +284,7 @@ All settings are controlled via environment variables. In Docker MCP Toolkit mod
 | `CLIENT_SECRET` | *(required)* | DigiKey API client secret |
 | `DIGIKEY_ACCOUNT_ID` | *(optional)* | DigiKey customer number. Required for order tools (`list_orders`, `get_order_status`). |
 | `USE_SANDBOX` | `true` | Use sandbox API (`true`) or production (`false`). The Dockerfile and catalog examples override this to `false`. |
-| `DIGIKEY_LOCALE_SITE` | `US` | DigiKey site (e.g., `AT`, `DE`, `UK`) |
+| `DIGIKEY_LOCALE_SITE` | `US` | DigiKey site (e.g., `AT`, `DE`, `UK`). Also sets the website domain for cart and MyList URLs (see below). |
 | `DIGIKEY_LOCALE_LANGUAGE` | `en` | Response language |
 | `DIGIKEY_LOCALE_CURRENCY` | `USD` | Pricing currency (e.g., `EUR`) |
 

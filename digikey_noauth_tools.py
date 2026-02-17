@@ -1,14 +1,39 @@
 import logging
+import os
 from urllib.parse import urlencode
 
 import requests
+from dotenv import load_dotenv
 
 from mcp_app import mcp
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-FASTADD_BASE = "https://www.digikey.com/classic/ordering/fastadd.aspx"
-MYLIST_THIRDPARTY_URL = "https://www.digikey.com/mylists/api/thirdparty"
+# Derive DigiKey website domain from DIGIKEY_LOCALE_SITE.
+# Most sites follow www.digikey.{cc} (e.g., .at, .de, .jp).
+# Exceptions: US → .com, plus countries with multi-segment TLDs.
+_DOMAIN_EXCEPTIONS = {
+    "US": "www.digikey.com",
+    "UK": "www.digikey.co.uk",
+    "AU": "www.digikey.com.au",
+    "MX": "www.digikey.com.mx",
+    "IL": "www.digikey.co.il",
+    "NZ": "www.digikey.co.nz",
+    "ZA": "www.digikey.co.za",
+    "TH": "www.digikey.co.th",
+}
+
+
+def _derive_domain(site_code: str) -> str:
+    site = site_code.upper()
+    return _DOMAIN_EXCEPTIONS.get(site, f"www.digikey.{site.lower()}")
+
+
+DIGIKEY_DOMAIN = _derive_domain(os.getenv("DIGIKEY_LOCALE_SITE", "US"))
+
+FASTADD_BASE = f"https://{DIGIKEY_DOMAIN}/classic/ordering/fastadd.aspx"
+MYLIST_THIRDPARTY_URL = f"https://{DIGIKEY_DOMAIN}/mylists/api/thirdparty"
 
 
 def generate_cart_url(parts: list[dict], new_cart: bool = True) -> dict:
