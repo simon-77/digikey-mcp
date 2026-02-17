@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 import requests
 
-from digikey_mcp_server import mcp
+from mcp_app import mcp
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,9 @@ def create_mylist_link(list_name: str, parts: list[dict], tags: str = None) -> d
         resp.raise_for_status()
 
     result = resp.json()
+    # API returns a plain JSON string (the URL), not an object
+    if isinstance(result, str):
+        return {"url": result}
     return {"url": result.get("singleUseUrl", str(result))}
 
 

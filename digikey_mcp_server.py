@@ -1,9 +1,11 @@
 import os
 import json
 import logging
-from fastmcp import FastMCP
 from dotenv import load_dotenv
 import requests
+
+from mcp_app import mcp  # shared FastMCP instance (avoids __main__ double-import)
+import digikey_noauth_tools  # noqa: E402, F401 — registers no-auth tools on mcp
 
 # Configure logging
 logging.basicConfig(
@@ -25,11 +27,6 @@ if USE_SANDBOX:
 else:
     TOKEN_URL = "https://api.digikey.com/v1/oauth2/token"
     API_BASE = "https://api.digikey.com"
-
-# Initialize FastMCP server
-mcp = FastMCP("DigiKey MCP Server")
-
-import digikey_noauth_tools  # noqa: E402, F401 — registers no-auth tools on mcp
 
 def get_access_token():
     """Get OAuth2 access token from DigiKey."""
@@ -223,7 +220,7 @@ def get_product_pricing(product_number: str, customer_id: str = "0", requested_q
         customer_id: Customer ID for pricing (default: "0")
         requested_quantity: Quantity for pricing calculation (default: 1)
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/productpricing"
+    url = f"{API_BASE}/products/v4/search/{product_number}/pricing"
     headers = _get_headers(customer_id)
     
     params = {"requestedQuantity": requested_quantity}
