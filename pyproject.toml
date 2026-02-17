@@ -1,7 +1,8 @@
 [project]
 name = "digikey-mcp"
 version = "0.2.0"
-description = "DigiKey MCP Server for product search, ordering, and order status"
+description = "DigiKey component search, pricing, ordering, and order status"
+license = "MIT"
 dependencies = [
     "fastmcp",
     "requests",

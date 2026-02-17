@@ -45,7 +45,7 @@ name: custom
 displayName: Custom MCP Servers
 registry:
   digikey:
-    description: DigiKey component search, pricing, and datasheets via API
+    description: DigiKey component search, pricing, ordering, and order status
     title: DigiKey
     type: server
     image: digikey-mcp:latest
@@ -297,6 +297,8 @@ This repo is structured for submission to the [docker/mcp-registry](https://gith
 **OAuth errors on first tool call:** Verify your credentials with `docker mcp secret list`. Secret names must be prefixed: `digikey.CLIENT_ID`, not `CLIENT_ID`.
 
 **Order tools return 400 Bad Request:** The order endpoints require `DIGIKEY_ACCOUNT_ID`. Set it with `docker mcp secret set digikey.DIGIKEY_ACCOUNT_ID`. The value is your DigiKey customer number, found in your [account settings](https://www.digikey.com/account/myaccount/).
+
+**API calls fail with 401 after running for a while:** The server fetches an OAuth token once at startup and does not refresh it. DigiKey tokens expire after ~30 minutes. Restart the MCP client (or container) to obtain a fresh token.
 
 **Catalog changes not taking effect:** Re-run `docker mcp catalog import ~/.docker/mcp/catalogs/custom.yaml` after editing the catalog file. Restart your MCP client afterward.
 

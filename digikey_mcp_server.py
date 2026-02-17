@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from urllib.parse import urlencode, quote
 from dotenv import load_dotenv
 import requests
 
@@ -82,7 +83,7 @@ def _get_headers(customer_id: str = "0"):
         headers["X-DIGIKEY-Account-Id"] = ACCOUNT_ID
     return headers
 
-def _make_request(method: str, url: str, headers: dict, data: dict = None) -> dict:
+def _make_request(method: str, url: str, headers: dict, data: dict | None = None) -> dict:
     """Make an API request with error handling and logging."""
     logger.info(f"Making {method} request to {url}")
     logger.debug(f"Headers: {json.dumps({k: v for k, v in headers.items() if 'Authorization' not in k}, indent=2)}")
@@ -147,16 +148,16 @@ def product_details(product_number: str, manufacturer_id: str | None = None, cus
         manufacturer_id: Optional manufacturer ID for disambiguation
         customer_id: Customer ID for pricing (default: "0")
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/productdetails"
+    url = f"{API_BASE}/products/v4/search/{quote(product_number, safe='')}/productdetails"
     headers = _get_headers(customer_id)
-    
+
     params = {}
     if manufacturer_id:
         params["manufacturerId"] = manufacturer_id
-    
+
     if params:
-        url += "?" + "&".join([f"{k}={v}" for k, v in params.items()])
-    
+        url += "?" + urlencode(params)
+
     return _make_request("GET", url, headers)
 
 @mcp.tool()
@@ -194,14 +195,14 @@ def search_product_substitutions(product_number: str, limit: int = 10, search_op
         search_options: Filters like LeadFree,RoHSCompliant,InStock
         exclude_marketplace: Exclude marketplace products (default: False)
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/substitutions"
+    url = f"{API_BASE}/products/v4/search/{quote(product_number, safe='')}/substitutions"
     headers = _get_headers()
-    
-    params = {"limit": limit, "excludeMarketPlaceProducts": exclude_marketplace}
+
+    params = {"limit": limit, "excludeMarketPlaceProducts": str(exclude_marketplace).lower()}
     if search_options:
         params["searchOptionList"] = search_options
-    
-    url += "?" + "&".join([f"{k}={v}" for k, v in params.items()])
+
+    url += "?" + urlencode(params)
     return _make_request("GET", url, headers)
 
 @mcp.tool()
@@ -211,7 +212,7 @@ def get_product_media(product_number: str):
     Args:
         product_number: The product to get media for
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/media"
+    url = f"{API_BASE}/products/v4/search/{quote(product_number, safe='')}/media"
     headers = _get_headers()
     return _make_request("GET", url, headers)
 
@@ -224,12 +225,12 @@ def get_product_pricing(product_number: str, customer_id: str = "0", requested_q
         customer_id: Customer ID for pricing (default: "0")
         requested_quantity: Quantity for pricing calculation (default: 1)
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/pricing"
+    url = f"{API_BASE}/products/v4/search/{quote(product_number, safe='')}/pricing"
     headers = _get_headers(customer_id)
-    
+
     params = {"requestedQuantity": requested_quantity}
-    url += "?" + "&".join([f"{k}={v}" for k, v in params.items()])
-    
+    url += "?" + urlencode(params)
+
     return _make_request("GET", url, headers)
 
 @mcp.tool()
@@ -241,12 +242,12 @@ def get_digi_reel_pricing(product_number: str, requested_quantity: int, customer
         requested_quantity: Quantity for DigiReel pricing
         customer_id: Customer ID for pricing (default: "0")
     """
-    url = f"{API_BASE}/products/v4/search/{product_number}/digireelpricing"
+    url = f"{API_BASE}/products/v4/search/{quote(product_number, safe='')}/digireelpricing"
     headers = _get_headers(customer_id)
-    
+
     params = {"requestedQuantity": requested_quantity}
-    url += "?" + "&".join([f"{k}={v}" for k, v in params.items()])
-    
+    url += "?" + urlencode(params)
+
     return _make_request("GET", url, headers)
 
 
@@ -268,7 +269,7 @@ def list_orders(start_date: str | None = None, end_date: str | None = None, page
     if end_date:
         params["EndDate"] = end_date
 
-    url += "?" + "&".join(f"{k}={v}" for k, v in params.items())
+    url += "?" + urlencode(params)
     return _make_request("GET", url, headers)
 
 

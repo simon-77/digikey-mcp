@@ -33,7 +33,10 @@ config:
     properties:
       locale_site:
         type: string
+        default: "US"
       locale_language:
         type: string
+        default: "en"
       locale_currency:
         type: string
+        default: "USD"
