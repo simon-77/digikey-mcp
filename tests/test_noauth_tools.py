@@ -41,3 +41,56 @@ def test_long_url_warning():
     result = generate_cart_url(parts)
     assert "warning" in result
     assert "url" in result
+
+
+from unittest.mock import patch, MagicMock
+from digikey_noauth_tools import create_mylist_link
+
+
+def test_mylist_link_builds_correct_payload():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.headers = {"Content-Type": "application/json"}
+    mock_resp.json.return_value = {
+        "singleUseUrl": "https://www.digikey.com/mylists/singleuse/abc123"
+    }
+
+    with patch("digikey_noauth_tools.requests.post", return_value=mock_resp) as mock_post:
+        result = create_mylist_link("TestList", [
+            {"part_number": "296-8875-1-ND", "quantity": 10, "reference": "R1"},
+        ])
+
+    assert result == {"url": "https://www.digikey.com/mylists/singleuse/abc123"}
+
+    call_args = mock_post.call_args
+    assert "listName=TestList" in call_args[0][0]
+    payload = call_args[1]["json"]
+    assert len(payload) == 1
+    assert payload[0]["requestedPartNumber"] == "296-8875-1-ND"
+    assert payload[0]["quantities"] == [{"quantity": 10}]
+    assert payload[0]["referenceDesignator"] == "R1"
+
+
+def test_mylist_link_with_tags():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.headers = {"Content-Type": "application/json"}
+    mock_resp.json.return_value = {"singleUseUrl": "https://example.com/x"}
+
+    with patch("digikey_noauth_tools.requests.post", return_value=mock_resp) as mock_post:
+        create_mylist_link("Test", [{"part_number": "X", "quantity": 1}], tags="KiCad,ProjectX")
+
+    assert "tags=KiCad%2CProjectX" in mock_post.call_args[0][0]
+
+
+def test_mylist_link_cloudflare_block():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 403
+    mock_resp.headers = {"Content-Type": "text/html"}
+    mock_resp.text = "<html>Cloudflare challenge</html>"
+
+    with patch("digikey_noauth_tools.requests.post", return_value=mock_resp):
+        result = create_mylist_link("Test", [{"part_number": "X", "quantity": 1}])
+
+    assert "error" in result
+    assert "Cloudflare" in result["error"] or "blocked" in result["error"].lower()

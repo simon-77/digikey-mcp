@@ -50,3 +50,61 @@ def generate_cart_url(parts: list[dict], new_cart: bool = True) -> dict:
 
 # Register as MCP tool (non-decorator form keeps function callable for tests)
 mcp.tool()(generate_cart_url)
+
+
+def create_mylist_link(list_name: str, parts: list[dict], tags: str = None) -> dict:
+    """Create a DigiKey MyList import link via the third-party API.
+
+    Returns a single-use URL. When the user opens it, the parts are
+    imported into their DigiKey MyLists account. No API credentials needed.
+
+    Args:
+        list_name: Name for the new list
+        parts: List of dicts with keys:
+            - part_number (str, required): DigiKey or manufacturer part number
+            - quantity (int, required): Quantity needed
+            - reference (str, optional): Reference designator (e.g., "R1")
+            - notes (str, optional): Additional notes
+            - manufacturer (str, optional): Manufacturer name
+        tags: Optional comma-separated tags (e.g., "KiCad,ProjectX")
+
+    Returns:
+        Dict with 'url' key containing the single-use import URL,
+        or 'error' key if the request was blocked.
+    """
+    params = {"listName": list_name}
+    if tags:
+        params["tags"] = tags
+
+    url = f"{MYLIST_THIRDPARTY_URL}?{urlencode(params)}"
+
+    payload = []
+    for part in parts:
+        payload.append({
+            "requestedPartNumber": part["part_number"],
+            "manufacturerName": part.get("manufacturer", ""),
+            "referenceDesignator": part.get("reference", ""),
+            "customerReference": part.get("customer_ref", ""),
+            "notes": part.get("notes", ""),
+            "quantities": [{"quantity": part["quantity"]}],
+        })
+
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "digikey-mcp/0.2.0",
+    }
+
+    logger.info(f"Creating MyList link: {list_name} with {len(parts)} parts")
+    resp = requests.post(url, json=payload, headers=headers)
+
+    if resp.status_code != 200:
+        logger.error(f"MyList API error: {resp.status_code} - {resp.text}")
+        if "text/html" in resp.headers.get("Content-Type", ""):
+            return {"error": "Request blocked (likely Cloudflare WAF). Try again later."}
+        resp.raise_for_status()
+
+    result = resp.json()
+    return {"url": result.get("singleUseUrl", str(result))}
+
+
+mcp.tool()(create_mylist_link)
