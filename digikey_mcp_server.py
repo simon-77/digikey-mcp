@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+ACCOUNT_ID = os.getenv("DIGIKEY_ACCOUNT_ID")
 USE_SANDBOX = os.getenv("USE_SANDBOX", "true").lower() == "true"
 
 # DigiKey OAuth2 token endpoint
@@ -68,7 +69,7 @@ logger.info("=== SERVER READY ===")
 def _get_headers(customer_id: str = "0"):
     """Get standard headers for DigiKey API requests."""
     token = _ensure_token()
-    return {
+    headers = {
         "Authorization": f"Bearer {token}",
         "X-DIGIKEY-Client-Id": CLIENT_ID,
         "Content-Type": "application/json",
@@ -77,6 +78,9 @@ def _get_headers(customer_id: str = "0"):
         "X-DIGIKEY-Locale-Currency": os.getenv("DIGIKEY_LOCALE_CURRENCY", "USD"),
         "X-DIGIKEY-Customer-Id": customer_id,
     }
+    if ACCOUNT_ID:
+        headers["X-DIGIKEY-Account-Id"] = ACCOUNT_ID
+    return headers
 
 def _make_request(method: str, url: str, headers: dict, data: dict = None) -> dict:
     """Make an API request with error handling and logging."""
@@ -98,7 +102,7 @@ def _make_request(method: str, url: str, headers: dict, data: dict = None) -> di
     return resp.json()
 
 @mcp.tool()
-def keyword_search(keywords: str, limit: int = 5, manufacturer_id: str = None, category_id: str = None, search_options: str = None, sort_field: str = None, sort_order: str = "Ascending"):
+def keyword_search(keywords: str, limit: int = 5, manufacturer_id: str | None = None, category_id: str | None = None, search_options: str | None = None, sort_field: str | None = None, sort_order: str = "Ascending"):
     """Search DigiKey products by keyword.
     
     Args:
@@ -135,7 +139,7 @@ def keyword_search(keywords: str, limit: int = 5, manufacturer_id: str = None, c
     return _make_request("POST", url, headers, body)
 
 @mcp.tool()
-def product_details(product_number: str, manufacturer_id: str = None, customer_id: str = "0"):
+def product_details(product_number: str, manufacturer_id: str | None = None, customer_id: str = "0"):
     """Get detailed information for a specific product.
     
     Args:
@@ -181,7 +185,7 @@ def get_category_by_id(category_id: int):
     return _make_request("GET", url, headers)
 
 @mcp.tool()
-def search_product_substitutions(product_number: str, limit: int = 10, search_options: str = None, exclude_marketplace: bool = False):
+def search_product_substitutions(product_number: str, limit: int = 10, search_options: str | None = None, exclude_marketplace: bool = False):
     """Search for product substitutions for a given product.
     
     Args:
@@ -247,7 +251,7 @@ def get_digi_reel_pricing(product_number: str, requested_quantity: int, customer
 
 
 @mcp.tool()
-def list_orders(start_date: str = None, end_date: str = None, page_size: int = 10) -> dict:
+def list_orders(start_date: str | None = None, end_date: str | None = None, page_size: int = 10) -> dict:
     """List DigiKey orders within a date range.
 
     Args:
