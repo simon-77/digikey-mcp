@@ -60,6 +60,10 @@ registry:
       - name: get_product_media
       - name: get_product_pricing
       - name: get_digi_reel_pricing
+      - name: generate_cart_url
+      - name: create_mylist_link
+      - name: list_orders
+      - name: get_order_status
     prompts: 0
     resources: {}
 ```
@@ -223,6 +227,20 @@ Locale env vars are optional — defaults are `US`/`en`/`USD` (see [Configuratio
 | `get_product_media` | Images, documents, videos for a product |
 | `get_product_pricing` | Detailed pricing with quantity breaks |
 | `get_digi_reel_pricing` | DigiReel-specific pricing |
+
+### Write / Push
+
+| Tool | Description |
+|------|-------------|
+| `generate_cart_url` | Build a FastAdd URL to populate the DigiKey shopping cart |
+| `create_mylist_link` | Create a single-use URL to import parts into DigiKey MyLists |
+
+### Order Status
+
+| Tool | Description |
+|------|-------------|
+| `list_orders` | List orders within a date range (last 30 days default) |
+| `get_order_status` | Get full details of a specific sales order |
 
 ### Search Options
 

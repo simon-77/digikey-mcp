@@ -6,7 +6,7 @@ meta:
   tags: [electronics, components, hardware, digikey]
 about:
   title: DigiKey
-  description: Search DigiKey's catalog — component pricing, datasheets, substitutions
+  description: DigiKey component search, pricing, ordering, and order status
   icon: https://www.google.com/s2/favicons?domain=digikey.com&sz=64
 source:
   project: https://github.com/simon-77/digikey-mcp
